@@ -1,0 +1,52 @@
+---
+- name: install node and npm
+  hosts: 184.72.115.118
+  become: yes
+  tasks:
+    - name: update apt repo and cache
+      apt: update_cache=yes force_apt_get=yes cache_valid_time=3600
+    - name: Install npm and node on the server
+      apt:
+        pkg:
+          - nodejs
+          - npm
+
+- name: create nodeapp user
+  hosts: 184.72.115.118
+  become: yes
+  tasks:
+    - name: create nodeapp user
+      user:
+        name: nodeapp
+        comment: this user running the node application    
+        state: present
+        shell: /bin/bash  
+
+- name: Deploy the  nodejs application
+  hosts: 184.72.115.118
+  # become_user: nodeapp
+  # become: true
+  # vars: 
+  #  - dest_path: /home/ubuntu/
+  #  - node_file: nodejs-app-1.0.0
+  vars_files: #di el tare2a el 3 fi ta3ref el variables
+    - /home/reham/project1/project-vars.yaml
+  tasks: 
+    - name: Copy Node artifact and unpack #badl extract
+      unarchive:
+        src: /home/reham/project1/simple-nodejs-app/{{nodejs-app-1.0.0}}.tgz #nodejs-app-1.0.0.tgz
+        dest: "{{dest_path}}"                #/home/ubuntu/ badlha handiha asm variable 3alashan tkon 2shal fel ast5dam
+        #dest: /home/nodeapp/ #el mafrod han5ly kol ubuntu nodeapp bas 3alashan el permissions mosh zabta hanrg3ha tani      
+    - name: install the nodejs dependancies
+      npm:
+        path: "{{dest_path}}/package"
+    - name : start the application
+      command: 
+        chdir: "{{dest_path}}/package"                 #/home/ubuntu/package/app/
+        cmd: node server.js
+      async: 45
+      poll: 0
+    - name: make sure the app is running
+      shell: ps aux | grep node
+      register: app_status
+    - debug: msg="Application status is :{{app_status.stdout}}"  
